@@ -77,33 +77,22 @@ function upperProps(obj) {
  */
 function slice(array, from, to) {
 
-    if (typeof from === 'undefined') {
-        return array;
+    let start = 0;
+    let end = array.length;
+
+    if (typeof from !== 'undefined') {
+        start = from;
     }
 
-    let output = [];
-    const startIndex = (from < 0) ? from + array.length : from;
-    const endIndex = (to < 0) ? array.length + to : to;
-
-    if (endIndex < 0) {
-        return [];
+    if (typeof to !== 'undefined') {
+        end = to;
     }
 
-    for (let i = startIndex; i < array.length; i++) {
-        const item = array[i];
-
-        if (typeof item === 'undefined') {
-            continue;
-        }
-
-        if (i === endIndex) {
-            break;
-        }
-
-        output.push(item);
+    if (end < 0) {
+        end = array.length + to;
     }
 
-    return output;
+    return array.filter((item, i) => i >= start && i < end);
 }
 
 /*
