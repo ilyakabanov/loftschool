@@ -44,8 +44,9 @@ function reduce(array, fn, initial) {
         i++;
     }
 
-    for (; i < array.length; i++) {
+    while (i < array.length) {
         previousValue = fn(previousValue, array[i], i, array);
+        i++;
     }
 
     return previousValue;
