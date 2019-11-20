@@ -17,6 +17,24 @@
    isAllTrue([100, 2, 3, 4, 5], n => n < 10) // вернет false
  */
 function isAllTrue(array, fn) {
+
+    if (!(array instanceof Array) || !array.length) {
+        throw new Error('empty array');
+    }
+
+    if (typeof fn !== 'function') {
+        throw new Error('fn is not a function');
+    }
+
+    for (let item of array) {
+        const result = fn(item);
+
+        if (!result) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 /*
@@ -36,6 +54,24 @@ function isAllTrue(array, fn) {
    isSomeTrue([1, 2, 3, 4, 5], n => n > 20) // вернет false
  */
 function isSomeTrue(array, fn) {
+
+    if (!(array instanceof Array) || !array.length) {
+        throw new Error('empty array');
+    }
+
+    if (typeof fn !== 'function') {
+        throw new Error('fn is not a function');
+    }
+
+    for (let item of array) {
+        const result = fn(item);
+
+        if (result) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /*
@@ -49,7 +85,24 @@ function isSomeTrue(array, fn) {
  3.3: Необходимо выбрасывать исключение в случаях:
    - fn не является функцией (с текстом "fn is not a function")
  */
-function returnBadArguments(fn) {
+function returnBadArguments(fn, ...args) {
+
+    if (typeof fn !== 'function') {
+        throw new Error('fn is not a function');
+    }
+
+    let errorArgs = [];
+
+    for (let arg of args) {
+
+        try {
+            fn(arg);
+        } catch (e) {
+            errorArgs.push(arg);
+        }
+    }
+
+    return errorArgs;
 }
 
 /*
@@ -69,7 +122,30 @@ function returnBadArguments(fn) {
    - number не является числом (с текстом "number is not a number")
    - какой-либо из аргументов div является нулем (с текстом "division by 0")
  */
-function calculator() {
+function calculator(number = 0) {
+
+    if (typeof number !== 'number') {
+        throw new Error('number is not a number');
+    }
+
+    return {
+        sum(...args) {
+            return args.reduce((prev, curr) => prev + curr, number);
+        },
+        dif(...args) {
+            return args.reduce((prev, curr) => prev - curr, number);
+        },
+        div(...args) {
+            if (args.indexOf(0) !== -1) {
+                throw new Error('division by 0');
+            }
+
+            return args.reduce((prev, curr) => prev / curr, number);
+        },
+        mul(...args) {
+            return args.reduce((prev, curr) => prev * curr, number);
+        }
+    }
 }
 
 /* При решении задач, пострайтесь использовать отладчик */
