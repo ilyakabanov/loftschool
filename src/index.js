@@ -27,9 +27,8 @@ function isAllTrue(array, fn) {
     }
 
     for (let item of array) {
-        const result = fn(item);
 
-        if (!result) {
+        if (!fn(item)) {
             return false;
         }
     }
@@ -64,9 +63,8 @@ function isSomeTrue(array, fn) {
     }
 
     for (let item of array) {
-        const result = fn(item);
 
-        if (result) {
+        if (fn(item)) {
             return true;
         }
     }
