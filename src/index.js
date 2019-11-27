@@ -11,7 +11,7 @@
    createDivWithText('loftschool') // создаст элемент div, поместит в него 'loftschool' и вернет созданный элемент
  */
 function createDivWithText(text) {
-    const element = document.createElement('div');
+    let element = document.createElement('div');
 
     element.textContent = text;
 
@@ -52,7 +52,7 @@ function prepend(what, where) {
 function findAllPSiblings(where) {
     let childrenArray = [];
 
-    for (const child of where.children) {
+    for (let child of where.children) {
         const nextElement = child.nextElementSibling;
 
         if (nextElement && nextElement.tagName === 'P') {
@@ -103,7 +103,7 @@ function findError(where) {
    должно быть преобразовано в <div></div><p></p>
  */
 function deleteTextNodes(where) {
-    for (const node of where.childNodes) {
+    for (let node of where.childNodes) {
         if (node.nodeType === 3) {
             where.removeChild(node);
         }
@@ -167,7 +167,7 @@ function collectDOMStat(root) {
 
     const getStatRecursive = elem => {
 
-        for (const node of elem.childNodes) {
+        for (let node of elem.childNodes) {
 
             if (node.nodeType === 3) {
                 stat.texts++;
@@ -181,7 +181,8 @@ function collectDOMStat(root) {
                 stat.tags[node.tagName]++;
 
                 if (node.classList) {
-                    for (const item of node.classList) {
+
+                    for (let item of node.classList) {
                         if (!stat.classes[item]) {
                             stat.classes[item] = 0;
                         }
@@ -235,7 +236,7 @@ function observeChildNodes(where, fn) {
 
     let observer = new MutationObserver(mutations => {
 
-        for (const mutation of mutations) {
+        for (let mutation of mutations) {
 
             if (mutation.addedNodes.length) {
                 fn({
