@@ -1,5 +1,21 @@
 /* Задание со звездочкой */
 
+import { randomNumber } from '../helper';
+
+function randomPosition(elemSize, winWidth, winHeight) {
+
+    return {
+        top: randomNumber(0, winHeight - elemSize),
+        left: randomNumber(0, winWidth - elemSize),
+    }
+}
+
+function randomColor() {
+    let rgbValue = [0, 0, 0].map(() => randomNumber(0, 255)).join();
+
+    return `rgb(${rgbValue})`;
+}
+
 /*
  Создайте страницу с кнопкой.
  При нажатии на кнопку должен создаваться div со случайными размерами, цветом и позицией на экране
@@ -27,6 +43,20 @@ const homeworkContainer = document.querySelector('#homework-container');
    homeworkContainer.appendChild(newDiv);
  */
 function createDiv() {
+    let div = document.createElement('div');
+
+    const size = randomNumber(10, 150);
+    const position = randomPosition(size, window.innerWidth, window.innerHeight);
+
+    div.style.width = `${size}px`;
+    div.style.height = `${size}px`;
+    div.style.backgroundColor = randomColor();
+    div.style.top = `${position.top}px`;
+    div.style.left = `${position.left}px`;
+    div.style.position = 'absolute';
+    div.classList.add('draggable-div');
+
+    return div;
 }
 
 /*
@@ -38,6 +68,25 @@ function createDiv() {
    addListeners(newDiv);
  */
 function addListeners(target) {
+    target.addEventListener('mousedown', (event) => {
+
+        let shiftX = event.clientX - target.getBoundingClientRect().left;
+        let shiftY = event.clientY - target.getBoundingClientRect().top;
+
+        homeworkContainer.append(target);
+
+        document.addEventListener('mousemove', moveElement);
+
+        target.addEventListener('mouseup', () => {
+            document.removeEventListener('mousemove', moveElement);
+        });
+
+        function moveElement(event) {
+            target.style.top = event.clientY - shiftY + 'px';
+            target.style.left = event.clientX - shiftX + 'px';
+        }
+    });
+
 }
 
 let addDivButton = homeworkContainer.querySelector('#addDiv');
