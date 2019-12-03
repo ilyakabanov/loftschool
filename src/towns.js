@@ -37,6 +37,26 @@ const homeworkContainer = document.querySelector('#homework-container');
  https://raw.githubusercontent.com/smelukov/citiesTest/master/cities.json
  */
 function loadTowns() {
+    return fetch('https://raw.githubusercontent.com/smelukov/citiesTest/master/cities.json')
+        .then(response => {
+            if (response.status >= 400) {
+                return Promise.reject();
+            }
+
+            return response.json();
+        }).then(towns => {
+
+            return towns.sort((a, b) => {
+                if (a.name > b.name) {
+                    return 1;
+                }
+                if (a.name < b.name) {
+                    return -1;
+                }
+
+                return 0;
+            });
+        });
 }
 
 /*
@@ -51,6 +71,11 @@ function loadTowns() {
    isMatching('Moscow', 'Moscov') // false
  */
 function isMatching(full, chunk) {
+    if (chunk) {
+        return (full.toLocaleLowerCase()).includes(chunk.toLocaleLowerCase());
+    }
+
+    return false;
 }
 
 /* Блок с надписью "Загрузка" */
@@ -61,10 +86,40 @@ const filterBlock = homeworkContainer.querySelector('#filter-block');
 const filterInput = homeworkContainer.querySelector('#filter-input');
 /* Блок с результатами поиска */
 const filterResult = homeworkContainer.querySelector('#filter-result');
+/* Блок с ошибкой */
+const errorBlock = homeworkContainer.querySelector('#error-block');
+/* Кнопка повторить загрузку */
+const repeatLoading = homeworkContainer.querySelector('#repeat-loading');
 
-filterInput.addEventListener('keyup', function() {
-    // это обработчик нажатия кливиш в текстовом поле
-});
+function initTownSearch() {
+    loadTowns().then(response => {
+        errorBlock.style.display = 'none';
+        loadingBlock.style.display = 'none';
+        filterBlock.style.display = 'block';
+
+        filterInput.addEventListener('keyup', (e) => {
+            filterResult.innerHTML = '';
+            let fragment = document.createDocumentFragment();
+            let result = response.filter(town => isMatching(town.name, e.target.value));
+
+            result.forEach(item => {
+                let li = document.createElement('div');
+
+                li.innerText = item.name;
+                fragment.append(li);
+            });
+
+            filterResult.append(fragment);
+        });
+    }).catch(() => {
+        loadingBlock.style.display = 'none';
+        errorBlock.style.display = 'block';
+    });
+}
+
+repeatLoading.addEventListener('click', initTownSearch);
+
+initTownSearch();
 
 export {
     loadTowns,
