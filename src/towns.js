@@ -100,12 +100,15 @@ function initTownSearch() {
         filterInput.addEventListener('keyup', (e) => {
             filterResult.innerHTML = '';
             let fragment = document.createDocumentFragment();
-            let result = response.filter(town => isMatching(town.name, e.target.value));
 
-            result.forEach(item => {
+            response.forEach(town => {
+                if (!isMatching(town.name, e.target.value)) {
+                    return;
+                }
+
                 let li = document.createElement('div');
 
-                li.innerText = item.name;
+                li.innerText = town.name;
                 fragment.append(li);
             });
 
