@@ -118,7 +118,6 @@ function initTownSearch() {
     });
 }
 
-
 initTownSearch();
 
 export {
