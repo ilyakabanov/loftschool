@@ -114,10 +114,10 @@ function initTownSearch() {
     }).catch(() => {
         loadingBlock.style.display = 'none';
         errorBlock.style.display = 'block';
+        repeatLoading.addEventListener('click', initTownSearch);
     });
 }
 
-repeatLoading.addEventListener('click', initTownSearch);
 
 initTownSearch();
 
