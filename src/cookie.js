@@ -43,16 +43,13 @@ const addButton = homeworkContainer.querySelector('#add-button');
 // таблица со списком cookie
 const listTable = homeworkContainer.querySelector('#list-table tbody');
 
-(function init() {
-    const cookies = getCookies();
+let cookies = getCookies();
 
-    for (const cookie in cookies) {
-        addTr(cookie, cookies[cookie]);
-    }
-})();
+for (const cookie in cookies) {
+    addTr(cookie, cookies[cookie]);
+}
 
 filterNameInput.addEventListener('keyup', (e) => {
-    const cookies = getCookies();
 
     listTable.innerHTML = '';
 
@@ -84,7 +81,7 @@ addButton.addEventListener('click', () => {
 
     document.cookie = `${name}=${value}`;
 
-    const cookies = getCookies();
+    cookies = getCookies();
 
     listTable.innerHTML = '';
 
