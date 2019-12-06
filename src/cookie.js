@@ -43,10 +43,85 @@ const addButton = homeworkContainer.querySelector('#add-button');
 // таблица со списком cookie
 const listTable = homeworkContainer.querySelector('#list-table tbody');
 
-filterNameInput.addEventListener('keyup', function() {
-    // здесь можно обработать нажатия на клавиши внутри текстового поля для фильтрации cookie
+(function init() {
+    const cookies = getCookies();
+
+    for (const cookie in cookies) {
+        addTr(cookie, cookies[cookie]);
+    }
+})();
+
+filterNameInput.addEventListener('keyup', (e) => {
+    const cookies = getCookies();
+
+    listTable.innerHTML = '';
+
+    for (let cookie in cookies) {
+        if (cookie.includes(e.target.value) || cookies[cookie].includes(e.target.value)) {
+            addTr(cookie, cookies[cookie]);
+        }
+    }
+});
+
+listTable.addEventListener('click', (e) => {
+
+    if (e.target.tagName == 'BUTTON') {
+        let tr = e.target.parentElement.parentElement;
+        let cookieName = tr.firstElementChild.innerText;
+
+        document.cookie = `${cookieName}=; max-age=0`;
+        tr.remove();
+    }
 });
 
 addButton.addEventListener('click', () => {
-    // здесь можно обработать нажатие на кнопку "добавить cookie"
+
+    const [name, value] = [addNameInput.value, addValueInput.value];
+
+    if (!name && !value) {
+        return;
+    }
+
+    document.cookie = `${name}=${value}`;
+
+    const cookies = getCookies();
+
+    listTable.innerHTML = '';
+
+    for (const cookie in cookies) {
+        if (cookies[cookie].includes(filterNameInput.value)) {
+            addTr(cookie, cookies[cookie]);
+        }
+    }
 });
+
+function getCookies() {
+    if (!document.cookie) {
+        return {};
+    }
+
+    return document.cookie.split('; ').reduce((prev, current) => {
+        const [name, value] = current.split('=');
+
+        prev[name] = value;
+
+        return prev;
+    }, {});
+}
+
+function addTr(name, value) {
+    let tr = document.createElement('tr');
+    let nameTd = document.createElement('td');
+    let valueTd = document.createElement('td');
+    let removeTd = document.createElement('td');
+
+    nameTd.textContent = name;
+    valueTd.textContent = value;
+    removeTd.innerHTML = '<button>Remove</button>';
+
+    tr.append(nameTd);
+    tr.append(valueTd);
+    tr.append(removeTd);
+
+    listTable.prepend(tr);
+}
