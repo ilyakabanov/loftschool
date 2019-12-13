@@ -11,44 +11,25 @@ function init() {
 
     const BalloonContentLayout = ymaps.templateLayoutFactory.createClass([
         '<div id="reviews" class="reviews">',
+        '{% if (!reviews.length)  %}',
+        '<p id="empty">Отзывов пока нет</p>',
+        '{% endif %}',
+        '{% for review in reviews %}',
         '<div class="reviews-item">',
-        '<div><b>{{ properties.name }}</b> <span class="place">{{ properties.place }}</span> <span class="time">11.12.2019<span></div>',
-        '<p>{{ properties.message }}</p>',
+        '<div><b>{{ review.name }}</b> <span class="place">{{ review.place }}</span> <span class="time">11.12.2019<span></div>',
+        '<p>{{ review.message }}</p>',
         '</div>',
+        '{% endfor %}',
         '</div>',
     ].join(''));
 
     const customItemContentLayout = ymaps.templateLayoutFactory.createClass([
-        '<h2 class=balloon_header>{{ properties.place|raw }}</h2>',
+        '<h2 class=balloon_header>{{ properties.reviews[0].place|raw }}</h2>',
         '<div class=balloon_body>',
         '<p><a class="link-to-balloon" data-pid="{{ properties.placemarkId }}" href="#">test</a></p>',
-        '<p>{{ properties.message|raw }}</p>',
+        '<p>{{ properties.reviews[0].message|raw }}</p>',
         '</div>',
         '<div class=balloon_footer>!!!!!13.12.2019</div>'
-    ].join(''));
-
-    var customBalloonContentLayout = ymaps.templateLayoutFactory.createClass([
-        '<div class="balloon">',
-        '<button class="close"></button>',
-        '<div class="head">',
-        '<span class="address">Невский пр., 78, Санкт-Петербург, 191025</span>',
-        '</div>',
-        '<div id="reviews" class="reviews">',
-        '{% for geoObject in properties.geoObjects %}',
-        '<div class="reviews-item">',
-        '<div><b>{{ geoObject.properties.name }}</b> <span class="place">{{ geoObject.properties.place }}</span> <span class="time">11.12.2019<span></div>',
-        '<p>{{ geoObject.properties.message }}</p>',
-        '</div>',
-        '{% endfor %}',
-        '</div>',
-        '<div class="review-form">',
-        '<h3>Ваш отзыв</h3>',
-        '<input type="text" id="name" placeholder="Ваше имя">',
-        '<input type="text" id="place" placeholder="Укажите место">',
-        '<textarea id="message" placeholder="Поделитесь впечатлениями"></textarea>',
-        '<div class="action"><button id="add-review">Добавить</button></div>',
-        '</div>',
-        '</div>',
     ].join(''));
 
     const BalloonLayout = ymaps.templateLayoutFactory.createClass([
@@ -84,7 +65,8 @@ function init() {
         },
         onCloseClick: function (e) {
             e.preventDefault();
-
+            // console.log(this.getData());
+            // console.log(this.getParameters());
             this.events.fire('userclose');
         },
     });
@@ -124,14 +106,21 @@ function init() {
         // console.log(map.balloon.getPosition());
         if (e.target.tagName === 'BUTTON' && e.target.id === 'add-review') {
             const reviews = document.querySelector('#reviews');
+            const empty = document.querySelector('#empty');
             const name = document.querySelector('#name');
             const place = document.querySelector('#place');
             const message = document.querySelector('#message');
 
+            if (empty) {
+                empty.remove();
+            }
+
             const props = {
-                name: name.value,
-                place: place.value,
-                message: message.value
+                reviews: [{
+                    name: name.value,
+                    place: place.value,
+                    message: message.value
+                }]
             };
 
             reviews.append(newReviewItem(props));
@@ -141,20 +130,30 @@ function init() {
                 iconImageHref: '/src/img/mark.png',
                 iconImageSize: [24, 36],
                 iconImageOffset: [-12, -36],
-                balloonLayout: BalloonLayout,
-                balloonContentLayout: BalloonContentLayout,
-                hideIconOnBalloonOpen: true,
+                // balloonLayout: BalloonLayout,
+                // balloonContentLayout: BalloonContentLayout,
+                // hideIconOnBalloonOpen: true,
             });
 
             clusterer.add(p);
 
+            name.value = '';
+            place.value = '';
+            message.value = '';
         }
 
         if (e.target.tagName === 'A' && e.target.classList.contains('link-to-balloon')) {
-            // debugger
-            if (clusterPlacemark.options) {
-                clusterPlacemark.options.set('clusterBalloonContentLayout', customBalloonContentLayout);
-            }
+
+            let reviews = clusterPlacemark.getGeoObjects().map(obj => obj.properties.get('reviews')[0]);
+
+            map.balloon.close();
+
+            map.balloon.open(clusterPlacemark.geometry.getCoordinates(), {
+                reviews: reviews
+            }, {
+                layout: BalloonLayout,
+                contentLayout: BalloonContentLayout
+            });
         }
     });
 
@@ -184,16 +183,24 @@ function init() {
             if (type === 'mouseleave' || type === 'balloonclose') {
                 target.options.set('iconImageHref', '/src/img/mark.png');
             }
+            if (type === 'click') {
+                map.balloon.open(target.geometry.getCoordinates(), target.properties.getAll(), {
+                    layout: BalloonLayout,
+                    contentLayout: BalloonContentLayout
+                });
+            }
         }
     });
 
     function newReviewItem(prop) {
+        const { name, place, message } = prop.reviews[0];
+
         let item = document.createElement('div');
 
         item.classList.add('reviews-item');
         item.innerHTML = `
-            <div><b>${prop.name}</b> <span class="place">${prop.place}</span> <span class="time">11.12.2019<span></div>
-            <p>${prop.message}</p>
+            <div><b>${name}</b> <span class="place">${place}</span> <span class="time">11.12.2019<span></div>
+            <p>${message}</p>
         `;
 
         return item;
