@@ -3,29 +3,17 @@ ymaps.ready(init);
 function init() {
     var map = new ymaps.Map('map', {
         center: [55.650625, 37.62708],
+        controls: ['zoomControl'],
         zoom: 10
     }, {
         searchControlProvider: 'yandex#search'
     });
 
     const BalloonContentLayout = ymaps.templateLayoutFactory.createClass([
-        '<div class="balloon">',
-        '<button class="close"></button>',
-        '<div class="head">',
-        '<span class="address">Невский пр., 78, Санкт-Петербург, 191025</span>',
-        '</div>',
         '<div id="reviews" class="reviews">',
         '<div class="reviews-item">',
         '<div><b>{{ properties.name }}</b> <span class="place">{{ properties.place }}</span> <span class="time">11.12.2019<span></div>',
         '<p>{{ properties.message }}</p>',
-        '</div>',
-        '</div>',
-        '<div class="review-form">',
-        '<h3>Ваш отзыв</h3>',
-        '<input type="text" id="name" placeholder="Ваше имя">',
-        '<input type="text" id="place" placeholder="Укажите место">',
-        '<textarea id="message" placeholder="Поделитесь впечатлениями"></textarea>',
-        '<div class="action"><button id="add-review">Добавить</button></div>',
         '</div>',
         '</div>',
     ].join(''));
@@ -42,6 +30,9 @@ function init() {
     var customBalloonContentLayout = ymaps.templateLayoutFactory.createClass([
         '<div class="balloon">',
         '<button class="close"></button>',
+        '<div class="head">',
+        '<span class="address">Невский пр., 78, Санкт-Петербург, 191025</span>',
+        '</div>',
         '<div id="reviews" class="reviews">',
         '{% for geoObject in properties.geoObjects %}',
         '<div class="reviews-item">',
@@ -60,29 +51,43 @@ function init() {
         '</div>',
     ].join(''));
 
-    const BalloonLayout = ymaps.templateLayoutFactory.createClass(
-        '$[[options.contentLayout observeSize minWidth=370px maxWidth=370px]]', {
-            build: function () {
-                this.constructor.superclass.build.call(this);
+    const BalloonLayout = ymaps.templateLayoutFactory.createClass([
+        '<div class="balloon">',
+        '<button class="close"></button>',
+        '<div class="head">',
+        '<span class="address">Невский пр., 78, Санкт-Петербург, 191025</span>',
+        '</div>',
+        '$[[options.contentLayout]]',
+        '<div class="review-form">',
+        '<h3>Ваш отзыв</h3>',
+        '<input type="text" id="name" placeholder="Ваше имя">',
+        '<input type="text" id="place" placeholder="Укажите место">',
+        '<textarea id="message" placeholder="Поделитесь впечатлениями"></textarea>',
+        '<div class="action"><button id="add-review">Добавить</button></div>',
+        '</div>',
+        '</div>',
+    ].join(''), {
+        build: function () {
+            this.constructor.superclass.build.call(this);
 
-                let close = document.querySelector('.close');
+            let close = document.querySelector('.close');
 
-                close.addEventListener('click', this.onCloseClick.bind(this));
-            },
-            clear: function () {
+            close.addEventListener('click', this.onCloseClick.bind(this));
+        },
+        clear: function () {
 
-                // let close = document.querySelector('.close');
-                //
-                // close.removeEventListener('click', this.onCloseClick);
+            // let close = document.querySelector('.close');
+            //
+            // close.removeEventListener('click', this.onCloseClick);
 
-                this.constructor.superclass.clear.call(this);
-            },
-            onCloseClick: function (e) {
-                e.preventDefault();
+            this.constructor.superclass.clear.call(this);
+        },
+        onCloseClick: function (e) {
+            e.preventDefault();
 
-                this.events.fire('userclose');
-            },
-        });
+            this.events.fire('userclose');
+        },
+    });
 
     const clusterer = new ymaps.Clusterer({
         preset: 'islands#invertedVioletClusterIcons',
@@ -115,19 +120,23 @@ function init() {
         }
     });
 
-    // console.log(map);
     document.addEventListener('click', function (e) {
         // console.log(map.balloon.getPosition());
         if (e.target.tagName === 'BUTTON' && e.target.id === 'add-review') {
+            const reviews = document.querySelector('#reviews');
             const name = document.querySelector('#name');
             const place = document.querySelector('#place');
             const message = document.querySelector('#message');
 
-            const p = new ymaps.Placemark(coords, {
+            const props = {
                 name: name.value,
                 place: place.value,
                 message: message.value
-            }, {
+            };
+
+            reviews.append(newReviewItem(props));
+
+            const p = new ymaps.Placemark(coords, props, {
                 iconLayout: 'default#image',
                 iconImageHref: '/src/img/mark.png',
                 iconImageSize: [24, 36],
@@ -177,5 +186,17 @@ function init() {
             }
         }
     });
+
+    function newReviewItem(prop) {
+        let item = document.createElement('div');
+
+        item.classList.add('reviews-item');
+        item.innerHTML = `
+            <div><b>${prop.name}</b> <span class="place">${prop.place}</span> <span class="time">11.12.2019<span></div>
+            <p>${prop.message}</p>
+        `;
+
+        return item;
+    }
 
 }
