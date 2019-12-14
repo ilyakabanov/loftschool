@@ -9,6 +9,15 @@ function init() {
         searchControlProvider: 'yandex#search'
     });
 
+    const customItemContentLayout = ymaps.templateLayoutFactory.createClass([
+        '<h2 class=balloon_header>{{ properties.reviews[0].place }}</h2>',
+        '<div class=balloon_body>',
+        '<p><a class="link-to-balloon"  href="#">{{ properties.address }}</a></p>',
+        '<p>{{ properties.reviews[0].message }}</p>',
+        '</div>',
+        '<div class=balloon_footer>{{ properties.reviews[0].date }}</div>'
+    ].join(''));
+
     const BalloonContentLayout = ymaps.templateLayoutFactory.createClass([
         '<div id="reviews" class="reviews">',
         '{% if (!reviews.length)  %}',
@@ -16,27 +25,18 @@ function init() {
         '{% endif %}',
         '{% for review in reviews %}',
         '<div class="reviews-item">',
-        '<div><b>{{ review.name }}</b> <span class="place">{{ review.place }}</span> <span class="time">11.12.2019<span></div>',
+        '<div><b>{{ review.name }}</b> <span class="place">{{ review.place }}</span> <span class="time">{{ review.date }}<span></div>',
         '<p>{{ review.message }}</p>',
         '</div>',
         '{% endfor %}',
         '</div>',
     ].join(''));
 
-    const customItemContentLayout = ymaps.templateLayoutFactory.createClass([
-        '<h2 class=balloon_header>{{ properties.reviews[0].place|raw }}</h2>',
-        '<div class=balloon_body>',
-        '<p><a class="link-to-balloon" data-pid="{{ properties.placemarkId }}" href="#">test</a></p>',
-        '<p>{{ properties.reviews[0].message|raw }}</p>',
-        '</div>',
-        '<div class=balloon_footer>!!!!!13.12.2019</div>'
-    ].join(''));
-
     const BalloonLayout = ymaps.templateLayoutFactory.createClass([
         '<div class="balloon">',
         '<button class="close"></button>',
         '<div class="head">',
-        '<span class="address">Невский пр., 78, Санкт-Петербург, 191025</span>',
+        '<span class="address">{{ address }}</span>',
         '</div>',
         '$[[options.contentLayout]]',
         '<div class="review-form">',
@@ -88,6 +88,8 @@ function init() {
     let clusterPlacemark;
 
     map.events.add('click', function (e) {
+
+        // console.log('click');
         if (!map.balloon.isOpen()) {
             coords = e.get('coords');
 
@@ -95,6 +97,8 @@ function init() {
                 layout: BalloonLayout,
                 contentLayout: BalloonContentLayout
             });
+
+            getAddress(coords);
 
         } else {
 
@@ -119,23 +123,22 @@ function init() {
                 reviews: [{
                     name: name.value,
                     place: place.value,
-                    message: message.value
-                }]
+                    message: message.value,
+                    date: getDate(),
+                }],
+                address: map.balloon.getData().address
             };
 
             reviews.append(newReviewItem(props));
 
-            const p = new ymaps.Placemark(coords, props, {
+            const placemark = new ymaps.Placemark(coords, props, {
                 iconLayout: 'default#image',
                 iconImageHref: '/src/img/mark.png',
                 iconImageSize: [24, 36],
-                iconImageOffset: [-12, -36],
-                // balloonLayout: BalloonLayout,
-                // balloonContentLayout: BalloonContentLayout,
-                // hideIconOnBalloonOpen: true,
+                iconImageOffset: [-12, -36]
             });
 
-            clusterer.add(p);
+            clusterer.add(placemark);
 
             name.value = '';
             place.value = '';
@@ -175,6 +178,7 @@ function init() {
         } else {
             // Событие произошло на геообъекте.
             if (type === 'balloonopen') {
+                // console.log('balloonopen');
                 coords = target.geometry.getCoordinates();
             }
             if (type === 'mouseenter') {
@@ -184,6 +188,8 @@ function init() {
                 target.options.set('iconImageHref', '/src/img/mark.png');
             }
             if (type === 'click') {
+                // console.log('clusterer click');
+                coords = target.geometry.getCoordinates();
                 map.balloon.open(target.geometry.getCoordinates(), target.properties.getAll(), {
                     layout: BalloonLayout,
                     contentLayout: BalloonContentLayout
@@ -193,17 +199,31 @@ function init() {
     });
 
     function newReviewItem(prop) {
-        const { name, place, message } = prop.reviews[0];
+        const { name, place, message, date } = prop.reviews[0];
 
         let item = document.createElement('div');
 
         item.classList.add('reviews-item');
         item.innerHTML = `
-            <div><b>${name}</b> <span class="place">${place}</span> <span class="time">11.12.2019<span></div>
+            <div><b>${name}</b> <span class="place">${place}</span> <span class="time">${date}<span></div>
             <p>${message}</p>
         `;
 
         return item;
     }
 
+    function getDate() {
+        const date = new Date();
+
+        return `${date.getDate()}.${date.getMonth()}.${date.getFullYear()}`;
+    }
+
+    function getAddress(coords) {
+
+        ymaps.geocode(coords).then(function (res) {
+            const firstGeoObject = res.geoObjects.get(0);
+
+            map.balloon.setData({ address: firstGeoObject.getAddressLine() });
+        });
+    }
 }
