@@ -9,23 +9,25 @@ function init() {
         searchControlProvider: 'yandex#search'
     });
 
-    const customItemContentLayout = ymaps.templateLayoutFactory.createClass([
-        '<h2 class=balloon_header>{{ properties.reviews[0].place }}</h2>',
-        '<div class=balloon_body>',
-        '<p><a class="link-to-balloon"  href="#">{{ properties.address }}</a></p>',
+    const ItemContentLayout = ymaps.templateLayoutFactory.createClass([
+        '<div class="balloon-cluster">',
+        '<h2 class=balloon-cluster__header>{{ properties.reviews[0].place }}</h2>',
+        '<div class=balloon-cluster__body>',
+        '<p><a class="link-to-balloon" data-placemark-id="{{ properties.placemarkId }}" href="#">{{ properties.address }}</a></p>',
         '<p>{{ properties.reviews[0].message }}</p>',
         '</div>',
-        '<div class=balloon_footer>{{ properties.reviews[0].date }}</div>'
+        '<div class=balloon-cluster__footer>{{ properties.reviews[0].date.date }} {{ properties.reviews[0].date.time }}</div>',
+        '</div>',
     ].join(''));
 
     const BalloonContentLayout = ymaps.templateLayoutFactory.createClass([
         '<div id="reviews" class="reviews">',
-        '{% if (!reviews.length)  %}',
+        '{% if (!reviews.length) %}',
         '<p id="empty">Отзывов пока нет</p>',
         '{% endif %}',
         '{% for review in reviews %}',
         '<div class="reviews-item">',
-        '<div><b>{{ review.name }}</b> <span class="place">{{ review.place }}</span> <span class="time">{{ review.date }}<span></div>',
+        '<div><b>{{ review.name }}</b> <span class="place">{{ review.place }}</span> <span class="time">{{ review.date.date }}<span></div>',
         '<p>{{ review.message }}</p>',
         '</div>',
         '{% endfor %}',
@@ -57,48 +59,46 @@ function init() {
         },
         clear: function () {
 
-            // let close = document.querySelector('.close');
-            //
-            // close.removeEventListener('click', this.onCloseClick);
-
             this.constructor.superclass.clear.call(this);
         },
         onCloseClick: function (e) {
             e.preventDefault();
-            // console.log(this.getData());
-            // console.log(this.getParameters());
+
             this.events.fire('userclose');
         },
     });
 
     const clusterer = new ymaps.Clusterer({
         preset: 'islands#invertedVioletClusterIcons',
-        groupByCoordinates: true,
         clusterDisableClickZoom: true,
         clusterHideIconOnBalloonOpen: false,
-        geoObjectHideIconOnBalloonOpen: false,
         clusterOpenBalloonOnClick: true,
         clusterBalloonContentLayout: 'cluster#balloonCarousel',
-        clusterBalloonItemContentLayout: customItemContentLayout,
+        clusterBalloonItemContentLayout: ItemContentLayout,
     });
 
     map.geoObjects.add(clusterer);
 
-    let coords;
-    let clusterPlacemark;
+    let currentCoords;
+    let currentPlacemark;
+
+    if (!sessionStorage.getItem('placemarks')) {
+        sessionStorage.setItem('placemarks', JSON.stringify([]));
+    } else {
+
+        const placemarks = JSON.parse(sessionStorage.getItem('placemarks'));
+
+        clusterer.add(placemarks.map(placemark => newPlacemark(placemark.coords, placemark.props)));
+    }
 
     map.events.add('click', function (e) {
 
-        // console.log('click');
         if (!map.balloon.isOpen()) {
-            coords = e.get('coords');
+            currentCoords = e.get('coords');
 
-            map.balloon.open(coords, {}, {
-                layout: BalloonLayout,
-                contentLayout: BalloonContentLayout
-            });
+            openBalloon(currentCoords);
 
-            getAddress(coords);
+            getAddress(currentCoords);
 
         } else {
 
@@ -107,7 +107,7 @@ function init() {
     });
 
     document.addEventListener('click', function (e) {
-        // console.log(map.balloon.getPosition());
+
         if (e.target.tagName === 'BUTTON' && e.target.id === 'add-review') {
             const reviews = document.querySelector('#reviews');
             const empty = document.querySelector('#empty');
@@ -126,19 +126,18 @@ function init() {
                     message: message.value,
                     date: getDate(),
                 }],
-                address: map.balloon.getData().address
+                address: map.balloon.getData().address,
+                placemarkId: clusterer.getGeoObjects().length
             };
+
+            let placemarks = JSON.parse(sessionStorage.getItem('placemarks'));
+
+            placemarks.push({ props: props, coords: currentCoords });
+            sessionStorage.setItem('placemarks', JSON.stringify(placemarks));
 
             reviews.append(newReviewItem(props));
 
-            const placemark = new ymaps.Placemark(coords, props, {
-                iconLayout: 'default#image',
-                iconImageHref: '/src/img/mark.png',
-                iconImageSize: [24, 36],
-                iconImageOffset: [-12, -36]
-            });
-
-            clusterer.add(placemark);
+            clusterer.add(newPlacemark(currentCoords, props));
 
             name.value = '';
             place.value = '';
@@ -147,59 +146,56 @@ function init() {
 
         if (e.target.tagName === 'A' && e.target.classList.contains('link-to-balloon')) {
 
-            let reviews = clusterPlacemark.getGeoObjects().map(obj => obj.properties.get('reviews')[0]);
+            let reviews = currentPlacemark.getGeoObjects().map(obj => obj.properties.get('reviews')[0]);
+
+            let placemarkId = parseInt(e.target.dataset.placemarkId);
+
+            let [ placemarkObj ] = currentPlacemark.getGeoObjects().filter(obj => obj.properties.get('placemarkId') === placemarkId);
+
+            currentCoords = placemarkObj.geometry.getCoordinates();
 
             map.balloon.close();
 
-            map.balloon.open(clusterPlacemark.geometry.getCoordinates(), {
-                reviews: reviews
-            }, {
-                layout: BalloonLayout,
-                contentLayout: BalloonContentLayout
+            openBalloon(currentCoords, {
+                reviews: reviews,
+                address: e.target.innerText,
             });
         }
     });
 
-    clusterer.events.add(['click', 'mouseenter', 'mouseleave', 'balloonopen', 'balloonclose'], function (e) {
+    clusterer.events.add(['click', 'mouseenter', 'mouseleave'], function (e) {
         let target = e.get('target'),
             type = e.get('type');
 
-        if (typeof target.getGeoObjects !== 'undefined') {
-            // Событие произошло на кластере.
-            if (type === 'click') {
-                clusterPlacemark = e.get('target');
-            }
-            if (type === 'balloonopen') {
-                coords = clusterPlacemark.geometry.getCoordinates();
-            }
-            if (type === 'balloonclose') {
-                clusterPlacemark.options.unset('clusterBalloonContentLayout');
-            }
-        } else {
+        if (type === 'click') {
+            currentCoords = target.geometry.getCoordinates();
+            currentPlacemark = target;
+        }
+
+        if (typeof target.getGeoObjects === 'undefined') {
             // Событие произошло на геообъекте.
-            if (type === 'balloonopen') {
-                // console.log('balloonopen');
-                coords = target.geometry.getCoordinates();
-            }
             if (type === 'mouseenter') {
                 target.options.set('iconImageHref', '/src/img/mark-act.png');
             }
-            if (type === 'mouseleave' || type === 'balloonclose') {
+            if (type === 'mouseleave') {
                 target.options.set('iconImageHref', '/src/img/mark.png');
             }
             if (type === 'click') {
-                // console.log('clusterer click');
-                coords = target.geometry.getCoordinates();
-                map.balloon.open(target.geometry.getCoordinates(), target.properties.getAll(), {
-                    layout: BalloonLayout,
-                    contentLayout: BalloonContentLayout
-                });
+                openBalloon(target.geometry.getCoordinates(), target.properties.getAll());
             }
         }
     });
 
-    function newReviewItem(prop) {
-        const { name, place, message, date } = prop.reviews[0];
+    function openBalloon(coords, props = {}) {
+
+        map.balloon.open(coords, props, {
+            layout: BalloonLayout,
+            contentLayout: BalloonContentLayout
+        });
+    }
+
+    function newReviewItem(props) {
+        const { name, place, message, date: { date } } = props.reviews[0];
 
         let item = document.createElement('div');
 
@@ -212,10 +208,42 @@ function init() {
         return item;
     }
 
+    function newPlacemark(coords, props) {
+
+        return new ymaps.Placemark(coords, props, {
+            iconLayout: 'default#image',
+            iconImageHref: '/src/img/mark.png',
+            iconImageSize: [24, 36],
+            iconImageOffset: [-12, -36]
+        });
+    }
+
     function getDate() {
         const date = new Date();
 
-        return `${date.getDate()}.${date.getMonth()}.${date.getFullYear()}`;
+        let dayOfMonth = date.getDate();
+        let month = date.getMonth() + 1;
+        let hour = date.getHours();
+        let minutes = date.getMinutes();
+        let seconds = date.getSeconds();
+
+        if (month < 10) {
+            month = '0' + month;
+        }
+        if (hour < 10) {
+            hour = '0' + hour;
+        }
+        if (minutes < 10) {
+            minutes = '0' + minutes;
+        }
+        if (seconds < 10) {
+            seconds = '0' + seconds;
+        }
+
+        return {
+            date: `${dayOfMonth}.${month}.${date.getFullYear()}`,
+            time: `${hour}:${minutes}:${seconds}`,
+        };
     }
 
     function getAddress(coords) {
@@ -223,7 +251,9 @@ function init() {
         ymaps.geocode(coords).then(function (res) {
             const firstGeoObject = res.geoObjects.get(0);
 
-            map.balloon.setData({ address: firstGeoObject.getAddressLine() });
+            map.balloon.setData({
+                address: firstGeoObject.getAddressLine()
+            });
         });
     }
 }

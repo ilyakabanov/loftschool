@@ -59,7 +59,7 @@ p {
 }
 
 .reviews {
-    max-height: 155px;
+    height: 155px;
     overflow: auto;
     margin: 0 10px 15px;
     border-bottom: 1px solid #ccc;
@@ -127,4 +127,22 @@ textarea::placeholder {
     height: 30px;
     line-height: 30px;
     border: none;
+}
+
+.balloon-cluster {
+    display: flex;
+    flex-direction: column;
+    height: 165px;
+}
+
+.balloon-cluster__header {
+    margin: 0.3em 0;
+}
+
+.balloon-cluster__body {
+    flex: 1;
+}
+
+.balloon-cluster__footer {
+    text-align: right;
 }
